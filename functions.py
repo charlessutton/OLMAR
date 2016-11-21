@@ -17,43 +17,47 @@ import numpy as np
 """
 Documentation for all the following filters : 
 INPUT : 
-df : a pandas.dataframe of price relatives to filter
+dataset : a pandas.dataframe of price relatives to filter
         of shape (nb_periods , nb_shares)
-
+params : a dict of parameters
         
 OUTPUT :
-f_df : the filtered price serie
+f_dataset : the filtered price serie dataset
+The resulting dataframe is such that 
 
 Specific documentation added in each function
 """
     
-
-def MA(df, window):
+def MA(dataset, params):
     """
+    Moving average
+    params should at least contain 
     w : window parameter
     """
+    p_dataset = to_absolute(dataset)
+    f_dataset = pd.rolling_mean(p_dataset, window = params["window"])    
+    return f_dataset
     
-    p_df = to_absolute(df)
-    f_ts = pd.rolling_mean(p_ts, window = window)    
-    return f_ts
+def EMA(dataset, params):    
+    """
+    Exponential moving average
+    params should at least contain 
+    com : is the center of mass parameter
+    """
+    p_dataset = to_absolute(dataset)
+    f_dataset = pd.ewma(p_dataset, com = params["com"])
+    return f_dataset
     
-def EMA(dataset, ):    
-    """pandas.ewma"""
-
-    p_ts = to_absolute(ts)
-    f_ts = pd.ewma(p_ts, )
-    return f_ts
-    
-def ZLEMA(dataset):
+def ZLEMA(dataset, params):
     """cf filters"""
-    p_ts = to_absolute(ts)
+    p_dataset = to_absolute(dataset)
     
 def KCA(dataset):
     """cf filters"""
-    p_ts = to_absolute(ts)
+    p_dataset = to_absolute(dataset)
     
 # Predictive analysis
-def predictions(f, dataset):
+def predictions(f, params, dataset):
     """
     INPUT : 
     f is a filter
@@ -80,7 +84,7 @@ def to_relative(prices):
 
 def to_absolute(price_relatives):
     """
-    Transfrom a price relatives sequence to a price sequence
+    Transfrom a price relatives dataframe to a price sequence dataframe
     The sequence if a pandas.series
     """
-    return price_relatives.cumprod()
+    return price_relatives.cumprod(axis=0)
