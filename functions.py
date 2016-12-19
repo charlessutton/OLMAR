@@ -55,11 +55,45 @@ def EMA(dataset, params):
 def ZLEMA(dataset, params):
     """cf filters"""
 #    p_dataset = to_absolute(dataset)
+
+def KCA(dataset, params = None):
+    """ 
+    KCA perform kalman filtering 
+    It is an online implementation of the kalman filter
+    We fix the seed parameter to 1 since it doesn't affect a lot the way the filter behave in our case.
+    """
+    p_dataset = to_absolute(dataset)
+    f_dataset = pd.DataFrame()
+    for stock in p_dataset.columns : 
+        f_dataset[stock] = kalman_filtering(p_dataset[stock])
+    return f_dataset
+
+from pykalman import KalmanFilter
+
+def kalman_filtering(price_sequence):
+
+    h = 1 #time step
+    A = np.array([[1,h,.5*h**2],
+                [0,1,h],
+                [0,0,1]])
+                
+    Q = np.eye(A.shape[0])
+    #2) Apply the filter    
+    kf = KalmanFilter(transition_matrices = A , transition_covariance = Q)
+      
+    means, covariances = kf.filter([price_sequence[0]])
     
-def KCA(dataset):
-    """cf filters"""
-#    p_dataset = to_absolute(dataset)
+    filtered_price_sequence = [means[0,0]]
     
+    for i in range(1,len(price_sequence)):
+        #to track it (streaming)
+        new_mean, new_covariance = kf.filter_update(means[-1], covariances[-1], price_sequence[i])
+        means = np.vstack([means,new_mean])
+        covariances = np.vstack([covariances,new_covariance.reshape((1,3,3))])
+    
+        filtered_price_sequence.append(means[i,0])
+    
+    return filtered_price_sequence
 # Predictive analysis
     
 def adjust_data(dataset, prediction ,horizon = 1):
@@ -96,9 +130,9 @@ def regression_report(adjusted_dataset, adjusted_prediction, output="all"):
 
     df = pd.DataFrame()
 
-    df["MAE"] = np.insert(mean_absolute_error(adjusted_dataset, adjusted_prediction,multioutput = "raw_values"), 0 , mean_absolute_error(adjusted_dataset, adjusted_prediction))
+    df["MAE"] = np.insert(mean_absolute_error(adjusted_dataset, adjusted_prediction, multioutput = "raw_values"), 0 , mean_absolute_error(adjusted_dataset, adjusted_prediction))
     df["DPA"] = direction_prediction_accuracy(adjusted_dataset,adjusted_prediction)
-    df["R2"] = np.insert(r2_score(adjusted_dataset, adjusted_prediction,multioutput = "raw_values"), 0 , r2_score(adjusted_dataset, adjusted_prediction))
+    df["R2"] = np.insert(r2_score(adjusted_dataset, adjusted_prediction, multioutput = "raw_values"), 0 , r2_score(adjusted_dataset, adjusted_prediction))
 
     # setting stock names as index
     df.index = adjusted_dataset.columns.insert(0, u'uniform_average')
@@ -106,7 +140,7 @@ def regression_report(adjusted_dataset, adjusted_prediction, output="all"):
     if output == "all" :
         return df
     elif output == "average" :
-        return df[0]
+        return df.iloc[0]
 
 def direction_prediction_accuracy(adjusted_dataset, adjusted_prediction):
     """
